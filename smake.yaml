@@ -1,0 +1,20 @@
+builds:
+  - curses:
+    - sources: main.cpp
+    - libraries: ncurses
+  - curses_debug:
+    - sources: main.cpp
+    - libraries: ncurses
+    - flags: -g
+
+targets:
+  - curses:
+    - modes: gdb, lldb
+    - builds:
+      - default: curses
+      - gdb: curses_debug
+      - lldb: curses_debug
+    - postbuilds:
+      - default: '{}'
+      - gdb: 'gdb {}'
+      - lldb: 'lldb {}'

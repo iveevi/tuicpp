@@ -4,6 +4,8 @@
 
 #include <ncurses.h>
 
+#include "cpp.nabu.hpp"
+
 // Screen info
 struct Scrinfo {
         int height;
@@ -117,19 +119,42 @@ public:
 		
                 // Colors
                 init_pair(1, 132, COLOR_BLACK); // TODO: static method
+                init_pair(2, 31, COLOR_BLACK);
+		init_pair(3, 215, COLOR_BLACK);	// for line numbers
+		// TODO: constants for colors
 
-                // Create text pad and fill it out
+		// Create text pad and fill it out
                 _pad = newpad(_lines.size(), width - 2);
 
                 int ln = 0;
-                std::string maxl = std::to_string(_lines.size());
+                int maxl = std::to_string(_lines.size()).length();
 
-                for (const std::string &line : _lines) {
-                        wattron(_pad, COLOR_PAIR(1));
-                        wprintw(_pad, "%*d: ", maxl.length(), ++ln);
-                        wattroff(_pad, COLOR_PAIR(1));
-                        wprintw(_pad, "%s", (line + '\n').c_str());
+                nabu::StringFeeder sf = nabu::StringFeeder::from_file(file);
+
+                nabu::ret rptr;
+                
+                // First line
+		// TODO: method to set color
+		wattron(_pad, COLOR_PAIR(3));
+                wprintw(_pad, "%*d: ", maxl, ++ln);
+		wattroff(_pad, COLOR_PAIR(3));
+
+                while ((rptr = nabu::rule <cpp::sh_main> ::value(&sf))) {
+                        nabu::mt_ret mr = nabu::get <nabu::mt_ret> (rptr);
+                        std::string str = nabu::get <std::string> (mr.second);
+
+                        if (str == "\n") {
+                                ln++;
+				wattron(_pad, COLOR_PAIR(3));
+                                wprintw(_pad, "\n%*d: ", maxl, ++ln);
+				wattroff(_pad, COLOR_PAIR(3));
+                        } else {
+                                wattron(_pad, COLOR_PAIR(mr.first));
+                                wprintw(_pad, "%s", str.c_str());
+                                wattroff(_pad, COLOR_PAIR(mr.first));
+                        }
                 }
+
                 cursor(0, 0);
                 
                 // Set keypad to true
@@ -183,7 +208,7 @@ int main()
         debug = Window(15, 20, 0, 0, "Debug");
         debug.refresh();
 
-        TextEditor te(20, 80, 10, 30, "smake.yaml");
+        TextEditor te(20, 80, 10, 30, "main.cpp");
         te.refresh();
         
         int c;

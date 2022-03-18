@@ -23,14 +23,20 @@ protected:
 	ScreenInfo _info;
 public:
 	Window() {}
-	Window(int height, int width, int y, int x) : _info {height, width, y, x} {}
+	Window(int height, int width, int y, int x)
+			: _info {height, width, y, x} {}
+	Window(const ScreenInfo& info)
+			: _info {info} {}
 };
 
 // Boxed window (title, border, etc.)
+// TODO: refactor this class (it has more than a box)
 class BoxedWindow : public Window {
         WINDOW *_box    = nullptr;
         WINDOW *_main   = nullptr;
         WINDOW *_title  = nullptr;
+
+	// TODO: subwindows
 public:
 	BoxedWindow() {}
 
@@ -47,7 +53,7 @@ public:
 		wrefresh(_box);
 	}
 
-	BoxedWindow(int height, int width, int y, int x, const std::string &title)
+	BoxedWindow(const std::string &title, int height, int width, int y, int x)
 			: Window(height, width, y, x) {
 		// Create the windows
 		_box = newwin(height, width, y, x);
@@ -60,31 +66,37 @@ public:
 
 		// Write title
 		int remaining = (width - 2) - title.length();
-		mvwprintw(_title, 1, remaining/2, title.c_str());
+		mvwprintw(_title, 1, remaining/2, "%s", title.c_str());
 
 		// Refresh all boxes
 		wrefresh(_box);
 		wrefresh(_title);
 	}
 
+	BoxedWindow(const std::string &title, const ScreenInfo &info)
+			: BoxedWindow(title, info.height, info.width, info.y, info.x) {}
+
+	// Refreshing
 	virtual void refresh() const {
 		wrefresh(_box);
 		wrefresh(_main);
 		wrefresh(_title);
 	}
 
+	// Printing
 	template <typename ... Args>
-		void printf(const char *str, Args ... args) const {
-			wprintw(_main, str, args...);
-			wrefresh(_main);
-		}
+	void printf(const char *str, Args ... args) const {
+		wprintw(_main, str, args...);
+		wrefresh(_main);
+	}
 
 	template <typename ... Args>
-		void mvprintf(int y, int x, const char *str, Args ... args) const {
-			mvwprintw(_main, y, x, str, args...);
-			wrefresh(_main);
-		}
+	void mvprintf(int y, int x, const char *str, Args ... args) const {
+		mvwprintw(_main, y, x, str, args...);
+		wrefresh(_main);
+	}
 
+	// Interact
 	int getc() const {
 		return wgetch(_main);
 	}
@@ -97,6 +109,20 @@ public:
 	void cursor(int y, int x) {
 		wmove(_main, y, x);
 	}
+
+	// Attributes
+	void attribute_on(int attr) {
+		wattron(_main, attr);
+	}
+
+	void attribute_off(int attr) {
+		wattroff(_main, attr);
+	}
+	
+	// TODO: place subwindows
+
+	// Fixed distances
+	static constexpr int decoration_height = 5;
 };
 
 }

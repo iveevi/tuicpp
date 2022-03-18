@@ -89,11 +89,8 @@ public:
 	}
 };
 
-// Debugging window
-Window debug;
-
 // TODO: simple textbox class
-class TextEditor : public Window {
+class TextEditor : public BoxedWindow {
         std::vector <std::string>       _lines;
 
         // Text pad
@@ -112,7 +109,7 @@ class TextEditor : public Window {
         }
 public:
         TextEditor(int height, int width, int y, int x, const std::string &file)
-                        : Window(height, width, y, x, file) {
+                        : BoxedWindow(height, width, y, x, file) {
                 // Read file lines
                 read_file(file);
 		
@@ -161,7 +158,7 @@ public:
         }
 
         void refresh() const override {
-                Window::refresh();
+                BoxedWindow::refresh();
                 prefresh(_pad, _cline, 0,
                         _info.y + 4,
                         _info.x + 1,
@@ -172,7 +169,7 @@ public:
 
         // Handle input
         void handle(int c) {
-                debug.mvprintf(0, 0, "Got: %d vs Up=%d\n", c, KEY_UP);
+                // debug.mvprintf(0, 0, "Got: %d vs Up=%d\n", c, KEY_UP);
                 switch(c) {
                 case KEY_UP:
                         if (_cline > 0)
@@ -204,7 +201,7 @@ int main()
         /* Window window(15, 20, 0, 0, "Title");
         window.refresh();
         window.printf("Hello from box"); */
-        debug = Window(15, 20, 0, 0, "Debug");
+        BoxedWindow debug = BoxedWindow(15, 20, 0, 0, "Debug");
         debug.refresh();
 
         TextEditor te(20, 80, 10, 30, "main.cpp");

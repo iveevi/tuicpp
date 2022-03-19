@@ -2,6 +2,7 @@
 #define TUICPP_H_
 
 // Standard headers
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -9,6 +10,10 @@
 #include <ncurses.h>
 
 namespace tuicpp {
+
+///////////////////////////
+// Main window hierarchy //
+///////////////////////////
 
 // Screen info
 struct ScreenInfo {
@@ -20,9 +25,6 @@ struct ScreenInfo {
 
 // Generic window class
 class Window {
-protected:
-	// Subwindows
-	std::vector <std::shared_ptr <Window>> _subwindows;
 public:
 	ScreenInfo info;
 
@@ -39,11 +41,12 @@ public:
 	virtual ~Window() = default;
 };
 
-// TODO: plainwindow class, which has the subwindows as children
 // Plain window, no border
 class PlainWindow : public Window {
 protected:
-	WINDOW *_main	= nullptr;
+	WINDOW *_main = nullptr;
+
+	// TODO: do we need subwindows?
 public:
 	// Default constructor
 	PlainWindow() = default;
@@ -69,6 +72,16 @@ public:
 	// Refreshing
 	virtual void refresh() const {
 		wrefresh(_main);
+	}
+
+	// Clear screen
+	virtual void clear() const {
+		wclear(_main);
+	}
+
+	// Erase screen
+	virtual void erase() const {
+		werase(_main);
 	}
 	
 	// Printing
@@ -129,6 +142,7 @@ public:
 	BoxedWindow() = default;
 
 	// Constructors
+	// TODO: clean up (duplicated code)
 	BoxedWindow(int height, int width, int y, int x)
 			: PlainWindow(height, width, y, x) {
 		// Create the windows
@@ -165,8 +179,8 @@ public:
 // Decorated Window (title, border, etc.)
 class DecoratedWindow : public BoxedWindow {
 protected:
-        WINDOW			*_title = nullptr;
-	const std::string	_title_str;
+        WINDOW *_title = nullptr;
+	const std::string _title_str;
 public:
 	// Default constructor
 	DecoratedWindow() = default;
@@ -217,9 +231,155 @@ public:
 
 	// TODO: change title string (with option to autoresize)
 	// + resize function
+	// TODO: how to get the content inside a window?
 
 	// Fixed distances
 	static constexpr int decoration_height = 5;
+};
+
+//////////////////////////////
+// Specialized window types //
+//////////////////////////////
+
+template <class T>
+class Table : public PlainWindow {
+public:
+	// Aliases
+	using Headers = std::vector <std::string>;
+	using Data = std::vector <T>;
+	using Generator = std::function <std::string (const T &, size_t)>;
+	using Lengths = std::vector <size_t>;
+protected:
+	Headers _headers;
+	Data _data;
+	Lengths _lengths;
+
+	// TODO: array of lengths for each column (either auto or specified)
+
+	// Function to generate columns from data
+	Generator _generator;
+
+	// Get lengths for each column
+	void _get_lengths() {
+		_lengths = Lengths(_headers.size(), 0);
+
+		for (size_t i = 0; i < _headers.size(); i++) {
+			_lengths[i] = _headers[i].length();
+			for (const auto &d : _data) {
+				size_t l = _generator(d, i).length();
+				if (l > _lengths[i])
+					_lengths[i] = l;
+			}
+		}
+	}
+
+	// Write table
+	void _write_table() const {
+		// Variables
+		int x = 0;
+		int line = 0;
+		
+		// Write top bar
+		x = 0;
+		
+		mvadd_char(line, 0, ACS_ULCORNER);
+		for (size_t i = 0; i < _headers.size(); i++) {
+			for (int j = 0; j < _lengths[i] + 2; j++)
+				mvadd_char(line, x + j + 1, ACS_HLINE);
+			x += _lengths[i] + 3;
+
+			if (i != _headers.size() - 1)
+				mvadd_char(line, x, ACS_TTEE);
+			else
+				mvadd_char(line, x, ACS_URCORNER);
+		}
+		line++;
+
+		// Write headers
+		x = 1;
+		for (size_t i = 0; i < _headers.size(); i++) {
+			mvprintf(line, x, " %s ", _headers[i].c_str());
+			x += _lengths[i] + 3;
+			mvadd_char(line, x - 1, ACS_VLINE);
+		}
+		mvadd_char(line, 0, ACS_VLINE);
+		line++;
+	
+		// Write middle bar
+		x = 0;
+		
+		mvadd_char(line, 0, ACS_LTEE);
+		for (size_t i = 0; i < _headers.size(); i++) {
+			for (int j = 0; j < _lengths[i] + 2; j++)
+				mvadd_char(line, x + j + 1, ACS_HLINE);
+			x += _lengths[i] + 3;
+
+			if (i != _headers.size() - 1)
+				mvadd_char(line, x, ACS_PLUS);
+			else
+				mvadd_char(line, x, ACS_RTEE);
+		}
+		line++;
+		
+		// Write data
+		for (const auto &d : _data) {
+			x = 1;
+			for (size_t i = 0; i < _headers.size(); i++) {
+				mvprintf(line, x, " %s ", _generator(d, i).c_str());
+				x += _lengths[i] + 3;
+				mvadd_char(line, x - 1, ACS_VLINE);
+			}
+			mvadd_char(line, 0, ACS_VLINE);
+			line++;
+		}
+	
+		// Write the bottom bar
+		x = 0;
+		
+		mvadd_char(line, 0, ACS_LLCORNER);
+		for (size_t i = 0; i < _headers.size(); i++) {
+			for (int j = 0; j < _lengths[i] + 2; j++)
+				mvadd_char(line, x + j + 1, ACS_HLINE);
+			x += _lengths[i] + 3;
+
+			if (i != _headers.size() - 1)
+				mvadd_char(line, x, ACS_BTEE);
+			else
+				mvadd_char(line, x, ACS_LRCORNER);
+		}
+		line++;
+	}
+public:
+	// Default constructor
+	Table() = default;
+
+	// Constructors
+	// TODO: auto resize window
+	Table(const Headers &headers, const Data &data, const Generator &generator,
+			int height, int width, int y, int x)
+			: PlainWindow(height, width, y, x),
+			_headers(headers), _data(data), _generator(generator) {
+		// Get lengths (auto)
+		_get_lengths();
+
+		// Write table
+		_write_table();
+
+		// Refresh all boxes
+		wrefresh(_main);
+	}
+
+	Table(const Headers &headers, const Data &data, const Generator &generator,
+			const ScreenInfo &info)
+			: Table(headers, data, generator,
+				info.height, info.width,
+				info.y, info.x
+			) {}
+
+	// Set the generator
+	void set_generator(const Generator &generator) {
+		_generator = generator;
+	}
 };
 
 }

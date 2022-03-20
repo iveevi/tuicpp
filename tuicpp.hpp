@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 // Ncurses
 #include <ncurses.h>
@@ -66,9 +67,11 @@ public:
 
 	// Destructor
 	virtual ~PlainWindow() {
+		werase(_main);
+		wrefresh(_main);
 		delwin(_main);
 	}
-	
+
 	// Refreshing
 	virtual void refresh() const {
 		wrefresh(_main);
@@ -83,7 +86,12 @@ public:
 	virtual void erase() const {
 		werase(_main);
 	}
-	
+
+	// Resizing window
+	virtual void resize(int height, int width) const {
+		wresize(_main, height, width);
+	}
+
 	// Printing
 	template <typename ... Args>
 	void printf(const char *str, Args ... args) const {
@@ -130,6 +138,10 @@ public:
 	void attribute_off(int attr) {
 		wattroff(_main, attr);
 	}
+
+	void attribute_set(int attr) {
+		wattrset(_main, attr);
+	}
 };
 
 // Window with a boxed border
@@ -172,6 +184,8 @@ public:
 	// Destructor
 	virtual ~BoxedWindow() {
 		// Delete the windows
+		werase(_box);
+		wrefresh(_box);
 		delwin(_box);
 	}
 };
@@ -209,6 +223,8 @@ public:
 	// Destructor
 	virtual ~DecoratedWindow() {
 		// Delete the windows
+		werase(_title);
+		wrefresh(_title);
 		delwin(_title);
 	}
 
@@ -221,10 +237,10 @@ public:
 	// Give title text an attribute
 	void attr_title(int attr) {
 		wattron(_title, attr);
-		
+
 		int remaining = (info.width - 2) - _title_str.length();
 		mvwprintw(_title, 1, remaining/2, "%s", _title_str.c_str());
-		
+
 		wattroff(_title, attr);
 		wrefresh(_title);
 	}
@@ -249,6 +265,20 @@ public:
 	using Data = std::vector <T>;
 	using Generator = std::function <std::string (const T &, size_t)>;
 	using Lengths = std::vector <size_t>;
+
+	// Update structure
+	struct From {
+		Headers headers;
+		Data data;
+		Generator generator;
+		Lengths lengths;
+
+		bool auto_resize = false;
+
+		// Constructor from headers and generator
+		From(const Headers &headers, Generator generator)
+				: headers(headers), generator(generator) {}
+	};
 protected:
 	Headers _headers;
 	Data _data;
@@ -274,14 +304,14 @@ protected:
 	}
 
 	// Write table
-	void _write_table() const {
+	void _write_table(int highlight = -1) const {
 		// Variables
 		int x = 0;
 		int line = 0;
-		
+
 		// Write top bar
 		x = 0;
-		
+
 		mvadd_char(line, 0, ACS_ULCORNER);
 		for (size_t i = 0; i < _headers.size(); i++) {
 			for (int j = 0; j < _lengths[i] + 2; j++)
@@ -304,10 +334,10 @@ protected:
 		}
 		mvadd_char(line, 0, ACS_VLINE);
 		line++;
-	
+
 		// Write middle bar
 		x = 0;
-		
+
 		mvadd_char(line, 0, ACS_LTEE);
 		for (size_t i = 0; i < _headers.size(); i++) {
 			for (int j = 0; j < _lengths[i] + 2; j++)
@@ -320,22 +350,40 @@ protected:
 				mvadd_char(line, x, ACS_RTEE);
 		}
 		line++;
-		
+
 		// Write data
-		for (const auto &d : _data) {
+		for (size_t n = 0; n < _data.size(); n++) {
 			x = 1;
+
+			T d = _data[n];
 			for (size_t i = 0; i < _headers.size(); i++) {
-				mvprintf(line, x, " %s ", _generator(d, i).c_str());
+				std::string str = _generator(d, i);
+				
+				// Pad string with spaces
+				str = str.substr(0, _lengths[i]);
+				if (str.length() < _lengths[i])
+					str.append(std::string(_lengths[i] - str.length(), ' '));
+
+				// Highlight if needed
+				if (n == highlight)
+					wattrset(_main, A_REVERSE);
+				
+				mvprintf(line, x, " %s ", str.c_str());
+
+				if (n == highlight)
+					wattrset(_main, A_NORMAL);
+
+				// Normal
 				x += _lengths[i] + 3;
 				mvadd_char(line, x - 1, ACS_VLINE);
 			}
 			mvadd_char(line, 0, ACS_VLINE);
 			line++;
 		}
-	
+
 		// Write the bottom bar
 		x = 0;
-		
+
 		mvadd_char(line, 0, ACS_LLCORNER);
 		for (size_t i = 0; i < _headers.size(); i++) {
 			for (int j = 0; j < _lengths[i] + 2; j++)
@@ -355,12 +403,22 @@ public:
 
 	// Constructors
 	// TODO: auto resize window
-	Table(const Headers &headers, const Data &data, const Generator &generator,
-			int height, int width, int y, int x)
+	Table(const From &from, int height, int width, int y, int x)
 			: PlainWindow(height, width, y, x),
-			_headers(headers), _data(data), _generator(generator) {
+			_headers(from.headers), _data(from.data),
+			_generator(from.generator), _lengths(from.lengths) {
 		// Get lengths (auto)
-		_get_lengths();
+		if (_lengths.empty())
+			_get_lengths();
+
+		// Resize window if requested
+		if (from.auto_resize) {
+			int new_height = _data.size() + 4;
+			int new_width = 1;
+			for (const auto &l : _lengths)
+				new_width += l + 3;
+			resize(new_height, new_width);
+		}
 
 		// Write table
 		_write_table();
@@ -369,16 +427,55 @@ public:
 		wrefresh(_main);
 	}
 
-	Table(const Headers &headers, const Data &data, const Generator &generator,
-			const ScreenInfo &info)
-			: Table(headers, data, generator,
+	Table(const From &from, const ScreenInfo &info)
+			: Table(from,
 				info.height, info.width,
 				info.y, info.x
 			) {}
 
+	// Update data
+	void set_data(const Data &data, bool auto_resize = false) {
+		// First, erase
+		erase();
+
+		_data = data;
+
+		if (auto_resize) {
+			_lengths.clear();
+			_get_lengths();
+			resize(_data.size() + 4, 1);
+		}
+
+		_write_table();
+		wrefresh(_main);
+	}
+
+	// Update lengths
+	void set_lengths(const Lengths &lengths) {
+		// First, erase
+		erase();
+
+		_lengths = lengths;
+		_write_table();
+		wrefresh(_main);
+	}
+
 	// Set the generator
 	void set_generator(const Generator &generator) {
+		// First, erase
+		erase();
+
 		_generator = generator;
+		_write_table();
+		wrefresh(_main);
+	}
+
+	// Highlight a row
+	void highlight_row(int row) {
+		// First, erase
+		erase();
+		_write_table(row);
+		wrefresh(_main);
 	}
 };
 

@@ -40,6 +40,13 @@ public:
 
 	// Destructor
 	virtual ~Window() = default;
+
+	// Get max height and width
+	static std::pair <int, int> limits() {
+		int max_height, max_width;
+		getmaxyx(stdscr, max_height, max_width);
+		return std::make_pair(max_height, max_width);
+	}
 };
 
 // Plain window, no border
@@ -90,6 +97,11 @@ public:
 	// Resizing window
 	virtual void resize(int height, int width) const {
 		wresize(_main, height, width);
+	}
+
+	// Move cursor to position
+	virtual void move(int y, int x) const {
+		wmove(_main, y, x);
 	}
 
 	// Printing
@@ -476,6 +488,57 @@ public:
 		erase();
 		_write_table(row);
 		wrefresh(_main);
+	}
+};
+
+// Field editor window
+template <class ... Args>
+class FieldEditor : public DecoratedWindow {
+public:
+	// Aliases
+	using Fields = std::array <std::string, sizeof...(Args)>;
+	using Yield = std::tuple <Args...>;
+protected:
+	Fields _fields;
+public:
+	// Default constructor
+	FieldEditor() = default;
+
+	// Constructor
+	FieldEditor(const std::string &title, const Fields &fnames,
+			const ScreenInfo &info)
+			: DecoratedWindow(title, info), _fields(fnames) {
+		// Write the fields
+		int line = 0;
+		for (const auto &f : _fields) {
+			mvprintf(line, 0, "%s: ", f.c_str());
+			line++;
+		}
+
+		// Add an [Enter] button
+		mvprintf(line, 0, "[Enter]");
+	}
+
+	// Yield the fields
+	Yield yield() {
+		// Tuple to return
+		Yield ret;
+
+		// Field index
+		int field = 0;
+
+		// Enable cursors and echo
+		curs_set(1);
+		echo();
+
+		// Get the fields
+		int c;
+		while ((c = getc())) {
+		}
+
+		// Disable cursors and no echo
+		curs_set(0);
+		noecho();
 	}
 };
 

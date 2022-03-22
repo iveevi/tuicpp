@@ -491,54 +491,225 @@ public:
 	}
 };
 
+// Yielders for upcoming FieldEditor class
+struct base_yielder {
+	enum class Ret {
+		RET_NOP,
+		RET_PLUS,
+		RET_DEL
+	};
+
+	virtual Ret proc(int) {
+		return Ret::RET_NOP;
+	}
+};
+
+template <class T>
+struct Tyielder : public base_yielder {
+	T *value;
+
+	Tyielder(T *ptr) : value(ptr) {}
+};
+
+using Yielder = std::shared_ptr <base_yielder>;
+
+// Specializations
+template <>
+struct Tyielder <std::string> : public base_yielder {
+	std::string *value;
+
+	Tyielder(std::string *ptr) : value(ptr) {}
+
+	Ret proc(int ch) override {
+		if (ch == KEY_BACKSPACE) {
+			if (!value->empty()) {
+				value->pop_back();
+				return Ret::RET_DEL;
+			}
+
+			return Ret::RET_NOP;
+		} else if (std::isprint(ch)) {
+			*value += ch;
+			return Ret::RET_PLUS;
+		}
+
+		return Ret::RET_NOP;
+	}
+};
+
+// Factory for Yielder
+template <class T>
+inline Yielder yielder(T *value)
+{
+	return std::shared_ptr <base_yielder>
+		(new Tyielder <T> {value});
+}
+
 // Field editor window
-template <class ... Args>
 class FieldEditor : public DecoratedWindow {
 public:
 	// Aliases
-	using Fields = std::array <std::string, sizeof...(Args)>;
-	using Yield = std::tuple <Args...>;
+	using Fields = std::vector <std::string>;
 protected:
 	Fields _fields;
+
+	// Field string contents
+	std::vector <std::string> _contents;
+
+	// Quit flag
+	bool _quit = false;
+
+	// Check movement input
+	bool _check_movement_input(int c, int &field) {
+		switch (c) {
+		case KEY_UP:
+			if (field > 0)
+				field--;
+			return true;
+		case KEY_DOWN:
+			if (field < _fields.size())
+				field++;
+			return true;
+		case 10: // Enter key
+			if (field == _fields.size())
+				_quit = true;
+			return true;
+		default:
+			break;
+		}
+
+		return false;
+	}
+
+	// Print ok button
+	void _print_ok(bool highlight) {
+		if (highlight)
+			attribute_set(A_REVERSE);
+
+		mvprintf(info.height - 6, info.width / 2 - 4, "[ OK ]");
+
+		if (highlight)
+			attribute_set(A_NORMAL);
+	}
+
+	// Update field
+	void _update_field(int field) {
+		// Substring to print
+		std::string substr = _contents[field];
+
+		// Check if scrolling is needed
+		size_t l = _fields[field].size() + 1
+			+ _contents[field].size();
+
+		if (l + 5 > info.width) {
+			// Scroll by taking substring
+			size_t offset = (l + 4) - info.width;
+			substr = _contents[field].substr(offset);
+		}
+
+		// First clear the field's line
+		cursor(field, 0);
+		wclrtoeol(_main);
+
+		// Reprint the field line
+		mvprintf(field, 0, "%s %s",
+			_fields[field].c_str(),
+			substr.c_str()
+		);
+	}
 public:
 	// Default constructor
 	FieldEditor() = default;
 
 	// Constructor
+	// TODO: remove screeninfo parameter (make a separate constructor)
 	FieldEditor(const std::string &title, const Fields &fnames,
 			const ScreenInfo &info)
 			: DecoratedWindow(title, info), _fields(fnames) {
+		// Pad all fields with spaces
+		size_t max_len = 0;
+		for (const auto &f : _fields)
+			max_len = std::max(max_len, f.size());
+
+		for (auto &f : _fields)
+			f.resize(max_len + 2, ' ');
+
 		// Write the fields
 		int line = 0;
 		for (const auto &f : _fields) {
-			mvprintf(line, 0, "%s: ", f.c_str());
+			mvprintf(line, 0, "%s ", f.c_str());
 			line++;
 		}
 
-		// Add an [Enter] button
-		mvprintf(line, 0, "[Enter]");
+		// Add [ OK ] button
+		_print_ok(false);
+
+		// Move cursor
+		cursor(0, _fields[0].size() + 2);
+		curs_set(1);
 	}
 
 	// Yield the fields
-	Yield yield() {
-		// Tuple to return
-		Yield ret;
+	// TODO: print error message if some conditions are not met
+	// (condition functions passed as another object -- input is the list of
+	// yeidlers)
+	void yield(const std::vector <Yielder> &yielders) {
+		// Set keyboard input
+		keypad(_main, true);
+
+		// Expand the fields
+		_contents.resize(yielders.size());
 
 		// Field index
 		int field = 0;
 
-		// Enable cursors and echo
-		curs_set(1);
-		echo();
-
 		// Get the fields
 		int c;
 		while ((c = getc())) {
+			// Check for movement inputs
+			bool moved = _check_movement_input(c, field);
+
+			// Check for quit
+			if (_quit)
+				break;
+
+			// Cursor position
+			size_t l = _fields[field].size() + 2
+				+ _contents[field].size();
+
+			// Highlight the ok button if needed
+			if (field >= _fields.size()) {
+				curs_set(0);
+				_print_ok(true);
+				continue;
+			} else {
+				curs_set(1);
+				_print_ok(false);
+			}
+			
+			// Move hte cursor
+			cursor(field, _fields[field].size() + 2);
+
+			// Skip if moved
+			if (moved)
+				continue;
+
+			// Yield the field
+			auto ret = yielders[field]->proc(c);
+			if (ret != base_yielder::Ret::RET_NOP) {
+				// Update contents
+				if (ret == base_yielder::Ret::RET_DEL)
+					_contents[field].pop_back();
+				else if (ret == base_yielder::Ret::RET_PLUS)
+					_contents[field] += c;
+
+				// Update the field
+				_update_field(field);
+			}
 		}
 
-		// Disable cursors and no echo
+		// Disable cursor
 		curs_set(0);
-		noecho();
 	}
 };
 

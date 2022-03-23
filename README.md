@@ -92,6 +92,7 @@ win.printf("Hello World!\n");
 win.printf("This is just an ordinary window!\n");
 win.printf("Notice that the text is being wrapped!\n");
 win.printf("Press any key to continue...\n");
+win.getc();
 ```
 
 Result:
@@ -123,3 +124,54 @@ Method							| Description
 
 Some of these methods (i.e. `refresh()` and `clear()`) are overriden in derived
 classes.
+
+#### BoxedWindow
+
+A window with a border surrounding it.
+
+```cpp
+auto win = tuicpp::BoxedWindow(
+	tuicpp::ScreenInfo {
+		.height = height,
+		.width = width,
+		.y = y,
+		.x = x
+	}
+);
+
+win.printf("Hello World!\n");
+win.printf("This is no ordinary window ... it has a border!\n");
+win.printf("Text is still being wrapped...\n");
+win.printf("Press any key to continue...\n");
+win.getc();
+```
+
+Result:
+
+![](media/boxed_window.png)
+
+#### DecoratedWindow
+
+A window with a border and a title bar.
+
+```cpp
+auto win = tuicpp::DecoratedWindow(
+	"My Decorated Window",
+	tuicpp::ScreenInfo {
+		.height = height,
+		.width = width,
+		.y = y,
+		.x = x
+	}
+);
+
+win.printf("Hello World!\n");
+win.printf("This is a decorated window\n");
+win.printf("It has a title bar and a border\n");
+win.printf("Press any key to continue...\n");
+win.getc();
+```
+
+Result:
+
+![](media/decorated_window.png)

@@ -1,12 +1,33 @@
 #include "global.hpp"
 
+std::map <std::string, void (*)()> functions {
+	{"plain", plain_window},
+	{"boxed", boxed_window},
+	{"decor", decorated_window}
+};
+
 int main()
 {
-	// Iniitialize ncurses
-	initscr();
+	// Prompt user for window type
+	std::cout << "What type of window would you like to create?\n";
+	for (auto const &[key, value] : functions)
+		std::cout << "\t" << key << "\n";
+	std::cout << "\n> ";
 
-	plain_window();
-	
-	// End ncurses
+	// Get user input
+	std::string input;
+	std::cin >> input;
+
+	// Check if input is valid
+	if (functions.find(input) == functions.end()) {
+		std::cout << "Not a valid window type.\n";
+		return 1;
+	}
+
+	// Run window type demo
+	initscr();
+	functions[input]();
 	endwin();
+
+	return 0;
 }

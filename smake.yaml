@@ -1,6 +1,11 @@
+default_standard: c++17
+
 builds:
   - demo_release:
-    - sources: 'demo/main.cpp, demo/plain_window.cpp'
+    - sources: 'demo/main.cpp,
+        demo/plain_window.cpp,
+        demo/boxed_window.cpp,
+        demo/decorated_window.cpp'
     - libraries: 'ncurses'
 
 targets:

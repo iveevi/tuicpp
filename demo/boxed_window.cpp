@@ -1,6 +1,6 @@
 #include "global.hpp"
 
-void plain_window()
+void boxed_window()
 {
 	static int height = 10;
 	static int width = 20;
@@ -10,7 +10,7 @@ void plain_window()
 	int y = (pr.first - height) / 2;
 	int x = (pr.second - width) / 2;
 
-	auto win = tuicpp::PlainWindow(
+	auto win = tuicpp::BoxedWindow(
 		tuicpp::ScreenInfo {
 			.height = height,
 			.width = width,
@@ -20,8 +20,8 @@ void plain_window()
 	);
 
 	win.printf("Hello World!\n");
-	win.printf("This is just an ordinary window!\n");
-	win.printf("Notice that the text is being wrapped!\n");
+	win.printf("This is no ordinary window ... it has a border!\n");
+	win.printf("Text is still being wrapped...\n");
 	win.printf("Press any key to continue...\n");
 	win.getc();
 }

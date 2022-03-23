@@ -558,6 +558,7 @@ protected:
 
 	// Quit flag
 	bool _quit = false;
+	bool _escape = false;
 
 	// Check movement input
 	bool _check_movement_input(int c, int &field) {
@@ -573,6 +574,18 @@ protected:
 		case 10: // Enter key
 			if (field == _fields.size())
 				_quit = true;
+			return true;
+		case '\t':
+			// Cycle through fields
+			if (field == _fields.size())
+				field = 0;
+			else
+				field++;
+
+			return true;
+		case 27: // Escape key
+			_escape = true;
+			_quit = true;
 			return true;
 		default:
 			break;
@@ -653,7 +666,7 @@ public:
 	// TODO: print error message if some conditions are not met
 	// (condition functions passed as another object -- input is the list of
 	// yeidlers)
-	void yield(const std::vector <Yielder> &yielders) {
+	bool yield(const std::vector <Yielder> &yielders) {
 		// Set keyboard input
 		keypad(_main, true);
 
@@ -710,6 +723,8 @@ public:
 
 		// Disable cursor
 		curs_set(0);
+
+		return (!_escape);
 	}
 };
 

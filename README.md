@@ -117,8 +117,8 @@ Method							| Description
 `getc()`						| Get a character that the user pressed, like `wgetc()`. Will block until a key is pressed.
 `set_keypad(bool bl)`					| Enables keypad for the window.
 `cursor(int y, int x)`					| A more sensible alias for `move()`.
-`attribute_on(int attr)`				| Turn on the attribute `atrr` for the window, like `wattron()`.
-`attribute_off(int attr)`				| Turn off the attribute `atrr` for the window, like `wattroff()`.
+`attribute_on(int attr)`				| Turn on the attribute `attr` for the window, like `wattron()`.
+`attribute_off(int attr)`				| Turn off the attribute `attr` for the window, like `wattroff()`.
 `attribute_set(int attr)`				| Set the attribute for the window to `attr`, like `wattrset()`.
 
 Some of these methods (i.e. `refresh()` and `clear()`) are overriden in derived

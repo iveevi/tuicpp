@@ -104,7 +104,7 @@ are inherited by all the remaining window types.
 ##### Method Summary
 
 Method							| Description
--							| -
+---							| ---
 `refresh()`						| Refreshes the window, essentially doing `wrefresh()`.
 `clear()`						| Clears the window, essentially doing `wclear()`.
 `erase()`						| Erase the window, essentially doing `werases()`. Unlike `clear()` there should not be as much flickering. All derived classes should this method as necessary.

@@ -1,20 +1,11 @@
 builds:
-  - curses:
-    - sources: main.cpp
-    - libraries: ncurses
-  - curses_debug:
-    - sources: main.cpp
-    - libraries: ncurses
-    - flags: -g
+  - demo_release:
+    - sources: 'demo/main.cpp, demo/plain_window.cpp'
+    - libraries: 'ncurses'
 
 targets:
-  - curses:
-    - modes: gdb, lldb
+  - demo:
     - builds:
-      - default: curses
-      - gdb: curses_debug
-      - lldb: curses_debug
+      - default: demo_release
     - postbuilds:
       - default: '{}'
-      - gdb: 'gdb {}'
-      - lldb: 'lldb {}'

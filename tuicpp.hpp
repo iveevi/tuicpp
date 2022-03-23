@@ -502,6 +502,10 @@ struct base_yielder {
 	virtual Ret proc(int) {
 		return Ret::RET_NOP;
 	}
+
+	virtual std::string content() {
+		return "";
+	}
 };
 
 template <class T>
@@ -535,6 +539,10 @@ struct Tyielder <std::string> : public base_yielder {
 
 		return Ret::RET_NOP;
 	}
+
+	std::string content() override {
+		return *value;
+	}
 };
 
 // Factory for Yielder
@@ -552,9 +560,6 @@ public:
 	using Fields = std::vector <std::string>;
 protected:
 	Fields _fields;
-
-	// Field string contents
-	std::vector <std::string> _contents;
 
 	// Quit flag
 	bool _quit = false;
@@ -606,18 +611,18 @@ protected:
 	}
 
 	// Update field
-	void _update_field(int field) {
+	void _update_field(int field, const std::vector <Yielder> &yielders) {
 		// Substring to print
-		std::string substr = _contents[field];
+		std::string substr = yielders[field]->content();
 
 		// Check if scrolling is needed
 		size_t l = _fields[field].size() + 1
-			+ _contents[field].size();
+			+ yielders[field]->content().size();
 
 		if (l + 5 > info.width) {
 			// Scroll by taking substring
 			size_t offset = (l + 4) - info.width;
-			substr = _contents[field].substr(offset);
+			substr = yielders[field]->content().substr(offset);
 		}
 
 		// First clear the field's line
@@ -625,7 +630,7 @@ protected:
 		wclrtoeol(_main);
 
 		// Reprint the field line
-		mvprintf(field, 0, "%s %s",
+		mvprintf(field, 0, "%s  %s",
 			_fields[field].c_str(),
 			substr.c_str()
 		);
@@ -670,11 +675,12 @@ public:
 		// Set keyboard input
 		keypad(_main, true);
 
-		// Expand the fields
-		_contents.resize(yielders.size());
-
 		// Field index
 		int field = 0;
+
+		// Update all fields
+		for (int i = 0; i < _fields.size(); i++)
+			_update_field(i, yielders);
 
 		// Get the fields
 		int c;
@@ -686,10 +692,6 @@ public:
 			if (_quit)
 				break;
 
-			// Cursor position
-			size_t l = _fields[field].size() + 2
-				+ _contents[field].size();
-
 			// Highlight the ok button if needed
 			if (field >= _fields.size()) {
 				curs_set(0);
@@ -699,6 +701,10 @@ public:
 				curs_set(1);
 				_print_ok(false);
 			}
+
+			// Cursor position
+			size_t l = _fields[field].size() + 2
+				+ yielders[field]->content().size();
 			
 			// Move hte cursor
 			cursor(field, _fields[field].size() + 2);
@@ -710,14 +716,8 @@ public:
 			// Yield the field
 			auto ret = yielders[field]->proc(c);
 			if (ret != base_yielder::Ret::RET_NOP) {
-				// Update contents
-				if (ret == base_yielder::Ret::RET_DEL)
-					_contents[field].pop_back();
-				else if (ret == base_yielder::Ret::RET_PLUS)
-					_contents[field] += c;
-
 				// Update the field
-				_update_field(field);
+				_update_field(field, yielders);
 			}
 		}
 

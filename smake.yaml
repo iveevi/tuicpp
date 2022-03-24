@@ -5,7 +5,9 @@ builds:
     - sources: 'demo/main.cpp,
         demo/plain_window.cpp,
         demo/boxed_window.cpp,
-        demo/decorated_window.cpp'
+        demo/decorated_window.cpp,
+        demo/table_window.cpp,
+        demo/editor_window.cpp'
     - libraries: 'ncurses'
 
 targets:

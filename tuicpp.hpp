@@ -370,7 +370,7 @@ protected:
 			T d = _data[n];
 			for (size_t i = 0; i < _headers.size(); i++) {
 				std::string str = _generator(d, i);
-				
+
 				// Pad string with spaces
 				str = str.substr(0, _lengths[i]);
 				if (str.length() < _lengths[i])
@@ -379,7 +379,7 @@ protected:
 				// Highlight if needed
 				if (n == highlight)
 					wattrset(_main, A_REVERSE);
-				
+
 				mvprintf(line, x, " %s ", str.c_str());
 
 				if (n == highlight)
@@ -661,10 +661,6 @@ public:
 
 		// Add [ OK ] button
 		_print_ok(false);
-
-		// Move cursor
-		cursor(0, _fields[0].size() + 2);
-		curs_set(1);
 	}
 
 	// Yield the fields
@@ -672,15 +668,23 @@ public:
 	// (condition functions passed as another object -- input is the list of
 	// yeidlers)
 	bool yield(const std::vector <Yielder> &yielders) {
+		// Field index
+		int field = 0;
+
 		// Set keyboard input
 		keypad(_main, true);
 
-		// Field index
-		int field = 0;
+		// Turn off echo
+		noecho();
 
 		// Update all fields
 		for (int i = 0; i < _fields.size(); i++)
 			_update_field(i, yielders);
+
+		// Move cursor
+		cursor(0, _fields[0].size() + 2
+			+ yielders[0]->content().size());
+		curs_set(1);
 
 		// Get the fields
 		int c;
@@ -705,9 +709,10 @@ public:
 			// Cursor position
 			size_t l = _fields[field].size() + 2
 				+ yielders[field]->content().size();
-			
-			// Move hte cursor
-			cursor(field, _fields[field].size() + 2);
+
+			// Move the cursor
+			cursor(field, _fields[field].size() + 2
+				+ yielders[field]->content().size());
 
 			// Skip if moved
 			if (moved)

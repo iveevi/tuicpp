@@ -190,3 +190,15 @@ win.getc();
 Result:
 
 ![](media/decorated_window.png)
+
+#### Table
+
+Now we get into more niche window types.
+
+![](media/table_window.png)
+
+#### FieldEditor
+
+The first interactive window type.
+
+![](media/editor_window.gif)

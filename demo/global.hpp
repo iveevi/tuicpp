@@ -9,5 +9,7 @@
 void plain_window();
 void boxed_window();
 void decorated_window();
+void table_window();
+void editor_window();
 
 #endif

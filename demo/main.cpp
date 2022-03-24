@@ -3,7 +3,9 @@
 std::map <std::string, void (*)()> functions {
 	{"plain", plain_window},
 	{"boxed", boxed_window},
-	{"decor", decorated_window}
+	{"decor", decorated_window},
+	{"table", table_window},
+	{"editor", editor_window}
 };
 
 int main()

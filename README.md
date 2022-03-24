@@ -5,6 +5,21 @@ based interfaces and applications.
 
 All API elements are enclosed inside the `tuicpp` namespace.
 
+## Table of Contents
+
+   * [Overview of tuicpp](#overview-of-tuicpp)
+      * [Setting up](#setting-up)
+      * [Import Structures](#import-structures)
+         * [ScreenInfo](#screeninfo)
+         * [World](#world)
+      * [Window types](#window-types)
+         * [PlainWindow](#plainwindow)
+            * [Method Summary](#method-summary)
+         * [BoxedWindow](#boxedwindow)
+         * [DecoratedWindow](#decoratedwindow)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+
 ## Overview of tuicpp
 
 ### Setting up

@@ -349,7 +349,21 @@ public:
 			const Option &option = Option {false, false})
 			: DecoratedWindow(title, info),
 			_option_list(option_list),
-			_option(option) {}
+			_option(option) {
+		// Preprocess the options list if centered
+		if (_option.centered) {
+			// Pad to the window width
+			int width = info.width - 4;
+			for (auto &str : _option_list) {
+				int len = str.length();
+				int pad_left = (width - len) / 2;
+				int pad_right = width - len - pad_left;
+
+				str.insert(0, pad_left, ' ');
+				str.append(pad_right, ' ');
+			}
+		}
+	}
 
 	// Yield selected options
 	bool yield(Selection &selected) {
@@ -401,12 +415,12 @@ public:
 
 	// Update structure
 	struct From {
-		Headers headers;
-		Data data;
-		Generator generator;
-		Lengths lengths;
+		Headers		headers;
+		Data		data;
+		Generator	generator;
+		Lengths		lengths;
 
-		bool auto_resize = false;
+		bool		auto_resize = false;
 
 		// Constructor from headers and generator
 		From(const Headers &headers, Generator generator)

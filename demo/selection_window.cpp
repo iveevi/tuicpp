@@ -12,7 +12,7 @@ void selection_window()
 	int x = (pr.second - width) / 2;
 
 	auto opts = tuicpp::SelectionWindow::Option {
-		.centered = false,
+		.centered = true,
 		.multi = false
 	};
 
@@ -24,7 +24,7 @@ void selection_window()
 	};
 
 	auto win = new tuicpp::SelectionWindow(
-		"My Decorated Window",
+		"Selection Window",
 		tuicpp::ScreenInfo {
 			.height = height,
 			.width = width,
@@ -48,7 +48,7 @@ void selection_window()
 
 void multi_selection_window()
 {
-	static int height = 10;
+	static int height = 11;
 	static int width = 34;
 
 	auto pr = tuicpp::Window::limits();
@@ -57,7 +57,7 @@ void multi_selection_window()
 	int x = (pr.second - width) / 2;
 
 	auto opts = tuicpp::SelectionWindow::Option {
-		.centered = false,
+		.centered = true,
 		.multi = true
 	};
 
@@ -69,7 +69,7 @@ void multi_selection_window()
 	};
 
 	auto win = new tuicpp::SelectionWindow(
-		"My Decorated Window",
+		"(Multi) Selection Window",
 		tuicpp::ScreenInfo {
 			.height = height,
 			.width = width,

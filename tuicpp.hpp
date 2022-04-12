@@ -4,6 +4,7 @@
 // Standard headers
 #include <functional>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -34,9 +35,9 @@ public:
 
 	// Constructors
 	Window(int height, int width, int y, int x)
-			: info {height, width, y, x} {}
+		: info {height, width, y, x} {}
 	Window(const ScreenInfo &i)
-			: info {i} {}
+		: info {i} {}
 
 	// Destructor
 	virtual ~Window() = default;
@@ -269,6 +270,126 @@ public:
 // Specialized window types //
 //////////////////////////////
 
+// Selection window, options for
+// 	allowing multiple selections
+class SelectionWindow : public DecoratedWindow {
+public:
+	// Public aliases
+	using OptionList = std::vector <std::string>;
+	using Selection = std::set <int>;
+
+	// Options for this window
+	struct Option {
+		bool centered;
+		bool multi;
+	};
+protected:
+	Option		_option;
+	OptionList	_option_list;
+	int		_line = 0;
+	bool		_terminate = false;
+
+	// Handle key input
+	void _handle_key(int c, Selection &selected) {
+		// Arrow keys
+		if (c == KEY_UP)
+			_line--;
+
+		if (c == KEY_DOWN)
+			_line++;
+
+		// Allow overflow if multi
+		int size = _option_list.size();
+		if (_option.multi)
+			_line = std::max(0, std::min(_line, size));
+		else
+			_line = std::max(0, std::min(_line, size - 1));
+
+		// TODO: undo all selections if ESC is pressed
+		if (c == 27)
+			_terminate = true;
+
+		// Enter key to select
+		if (c == 10) {
+			if (!_option.multi) {
+				selected.insert(_line);
+				_terminate = true;
+			} else {
+				// Check if on the OK key
+				if (_line == size) {
+					_terminate = true;
+					return;
+				}
+
+				if (selected.find(_line) == selected.end())
+					selected.insert(_line);
+				else
+					selected.erase(_line);
+			}
+		}
+	}
+
+	// Print ok button
+	void _print_ok(bool highlight) {
+		if (highlight)
+			attribute_set(A_REVERSE);
+
+		mvprintf(info.height - 6, info.width / 2 - 4, "[ OK ]");
+
+		if (highlight)
+			attribute_set(A_NORMAL);
+	}
+public:
+	// Default constructor
+	SelectionWindow() = default;
+
+	// Constructors
+	SelectionWindow(const std::string &title, const ScreenInfo &info,
+			const OptionList &option_list,
+			const Option &option = Option {false, false})
+			: DecoratedWindow(title, info),
+			_option_list(option_list),
+			_option(option) {}
+
+	// Yield selected options
+	bool yield(Selection &selected) {
+		// TODO: ok button if multiselect
+
+		// No echo, no cursor
+		noecho();
+		curs_set(0);
+
+		// Keyboard
+		// TODO: method
+		keypad(_main, true);
+
+		// Loop
+		while (!_terminate) {
+			// Reprint all options
+			for (int i = 0; i < _option_list.size(); i++) {
+				// Hghlight if selected or hovering
+				if (selected.count(i) || i == _line)
+					attribute_on(A_REVERSE);
+				mvprintf(i, 1, "%s", _option_list[i].c_str());
+				attribute_set(A_NORMAL);
+			}
+
+			// Print ok button if multiselect
+			if (_option.multi)
+				_print_ok(_line == _option_list.size());
+
+			// Key handling
+			_handle_key(getc(), selected);
+
+			// Refresh
+			refresh();
+		}
+
+		return selected.size() > 0;
+	}
+};
+
+// Display a table on a window
 template <class T>
 class Table : public PlainWindow {
 public:

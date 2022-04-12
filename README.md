@@ -5,8 +5,11 @@ based interfaces and applications.
 
 All API elements are enclosed inside the `tuicpp` namespace.
 
-## Table of Contents
+Table of Contents
+=================
 
+* [tuicpp](#tuicpp)
+   * [Table of Contents](#table-of-contents)
    * [Overview of tuicpp](#overview-of-tuicpp)
       * [Setting up](#setting-up)
       * [Import Structures](#import-structures)
@@ -17,6 +20,9 @@ All API elements are enclosed inside the `tuicpp` namespace.
             * [Method Summary](#method-summary)
          * [BoxedWindow](#boxedwindow)
          * [DecoratedWindow](#decoratedwindow)
+         * [SelectionWindow](#selectionwindow)
+         * [Table](#table)
+         * [FieldEditor](#fieldeditor)
 
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
 
